@@ -1,0 +1,51 @@
+# python stuff
+*.pyc
+*.pyo
+
+# prevent built pdfs to be automatically included to commits every time
+doc/*.pdf
+
+# docu stuff
+*.toc
+*.aux
+*.blg
+*.out
+*.log
+*.nvm
+*.snm
+doc/output/*
+doc/output/*
+
+# windows cython output
+fastmat/*.dll
+*.pyd
+
+# general stuff
+*.bak
+*.html
+
+# build stuff
+dist/*
+build/*
+fastmat.egg-info
+*.egginfo
+*.egg
+
+# testing stuff
+test/results*
+
+# benchmark stuff
+*.csv
+
+# setup stuff
+setup.files
+
+# cython stuff
+*.c
+*.so
+
+# coverage results
+.coverage
+
+# kate swap
+*.kate-swp

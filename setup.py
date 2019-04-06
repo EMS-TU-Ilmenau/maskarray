@@ -1,0 +1,335 @@
+# -*- coding: utf-8 -*-
+# Copyright 2019 Christoph Wagner
+#     https://www.tu-ilmenau.de/it-ems/
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# import modules
+import platform
+import sys
+import os
+import re
+import subprocess
+from distutils import sysconfig
+
+
+def WARNING(string):
+    print("\033[91mWARNING:\033[0m %s" % (string))
+
+
+def ERROR(string, e):
+    print("\033[91mERROR:\033[0m %s" % (string))
+    raise e
+
+
+def INFO(string):
+    print("\033[96mINFO:\033[0m %s" % (string))
+
+
+# load setup and extensions from setuptools. If that fails, try distutils
+try:
+    from setuptools import setup, Extension
+except ImportError:
+    WARNING("Could not import setuptools.")
+    raise
+
+# global package constants
+packageName     = 'maskarray'
+packageVersion  = '<INVALID>'
+strVersionFile  = "%s/version.py" %(packageName)
+
+VERSION_PY = """
+# -*- coding: utf-8 -*-
+# This file carries the module's version information which will be updated
+# during execution of the installation script, setup.py. Distribution tarballs
+# contain a pre-generated copy of this file.
+
+__version__ = '%s'
+"""
+
+##############################################################################
+### function and class declaration section. DO NOT PUT SCRIPT CODE IN BETWEEN
+##############################################################################
+
+
+# Enable flexible dependency handling by installing missing base components
+class lazyCythonize(list):
+    '''
+    Override list type to allow lazy cythonization.
+    Cythonize and compile only after install_requires are actually installed.
+    '''
+
+    def __init__(self, callback):
+        self._list, self.callback = None, callback
+
+    def c_list(self):
+        if self._list is None:
+            self._list = self.callback()
+
+        return self._list
+
+    def __iter__(self):
+        for e in self.c_list():
+            yield e
+
+    def __getitem__(self, ii):
+        return self.c_list()[ii]
+
+    def __len__(self):
+        return len(self.c_list())
+
+
+def extensions():
+    '''
+    Handle generation of extensions (a.k.a "managing cython compilery").
+    '''
+    try:
+        from Cython.Build import cythonize
+    except ImportError:
+        def cythonize(*args, **kwargs):
+            print("Hint: Wrapping import of cythonize in extensions()")
+            from Cython.Build import cythonize
+            return cythonize(*args, **kwargs)
+
+    try:
+        import numpy
+        lstIncludes = [numpy.get_include()]
+    except ImportError:
+        lstIncludes = []
+
+    extensionArguments = {
+        'include_dirs':
+        lstIncludes + [packageName],
+        'extra_compile_args': compilerArguments,
+        'extra_link_args': linkerArguments,
+        'define_macros': defineMacros
+    }
+
+    # me make damn sure, that disutils does not mess with our
+    # build process
+    global useGccOverride
+    if useGccOverride:
+        INFO('Overriding compiler setup for `gcc -shared`')
+        sysconfig.get_config_vars()['CFLAGS'] = ''
+        sysconfig.get_config_vars()['OPT'] = ''
+        sysconfig.get_config_vars()['PY_CFLAGS'] = ''
+        sysconfig.get_config_vars()['PY_CORE_CFLAGS'] = ''
+        sysconfig.get_config_vars()['CC'] = 'gcc'
+        sysconfig.get_config_vars()['CXX'] = 'g++'
+        sysconfig.get_config_vars()['BASECFLAGS'] = ''
+        sysconfig.get_config_vars()['CCSHARED'] = '-fPIC'
+        sysconfig.get_config_vars()['LDSHARED'] = 'gcc -shared'
+        sysconfig.get_config_vars()['CPP'] = ''
+        sysconfig.get_config_vars()['CPPFLAGS'] = ''
+        sysconfig.get_config_vars()['BLDSHARED'] = ''
+        sysconfig.get_config_vars()['CONFIGURE_LDFLAGS'] = ''
+        sysconfig.get_config_vars()['LDFLAGS'] = ''
+        sysconfig.get_config_vars()['PY_LDFLAGS'] = ''
+
+    return cythonize(
+        [Extension("*", ["%s/*.pyx" %(packageName, )], **extensionArguments)],
+        compiler_directives=cythonDirectives,
+        nthreads=4
+    )
+
+
+# determine requirements for install and setup
+def checkRequirement(lstRequirements, importName, requirementName):
+    '''
+    Don't add packages unconditionally as this involves the risk of updating an
+    already installed package. Sometimes this may break during install or mix
+    up dependencies after install. Consider an update only if the requested
+    package is not installed at all or if we are building an installation
+    wheel.
+    '''
+    try:
+        __import__(importName)
+    except ImportError:
+        lstRequirements.append(requirementName)
+    else:
+        if 'bdist_wheel' in sys.argv[1:]:
+            lstRequirements.append(requirementName)
+
+
+def doc_opts():
+    '''
+    Introduce a command-line setup target to generate the sphinx doc.
+    '''
+    try:
+        from sphinx.setup_command import BuildDoc
+    except ImportError:
+        return {}
+
+    class OwnDoc(BuildDoc):
+
+        def __init__(self, *args, **kwargs):
+            super(OwnDoc, self).__init__(*args, **kwargs)
+
+    return OwnDoc
+
+
+##############################################################################
+### The actual script. KEEP THE `import filter` ALIVE AT ALL TIMES
+##############################################################################
+
+if __name__ == '__main__':
+    # get version from git and update fastmat/__init__.py accordingly
+    try:
+        with open(".version", "r") as f:
+            lines = [str(s) for s in [ln.strip() for ln in f] if len(s)]
+        packageVersion = lines[0]
+    except IOError as e:
+        Error("Setting package version", e)
+    except IndexError as e:
+        Error("Version file is empty", e)
+
+    # make sure there exists a version.py file in the project
+    with open(strVersionFile, "w") as f:
+        f.write(VERSION_PY % (packageVersion))
+    print("Set %s to '%s'" % (strVersionFile, packageVersion))
+
+    # get the long description from the README file.
+    # CAUTION: Python2/3 utf encoding shit calls needs some adjustments
+    fileName = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        'README.md'
+    )
+
+    f = (open(fileName, 'r') if sys.version_info < (3, 0)
+         else open(fileName, 'r', encoding='utf-8'))
+    longDescription = f.read()
+    f.close()
+
+    pypiName = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        'pypi.md'
+    )
+
+    f = (open(fileName, 'r') if sys.version_info < (3, 0)
+         else open(fileName, 'r', encoding='utf-8'))
+    pypiDescription = f.read()
+    f.close()
+
+    # Build for generic (legacy) architectures when enviroment variable
+    # (MASKARRAY_GENERIC) is defined
+    if 'MASKARRAY_GENERIC' in os.environ:
+        marchFlag = '-march=x86-64'
+        mtuneFlag = '-mtune=core2'
+        WARNING("Building package for generic architectures")
+    else:
+        marchFlag = '-march=native'
+        mtuneFlag = '-mtune=native'
+
+    # define different compiler arguments for each platform
+    strPlatform = platform.system()
+    compilerArguments = []
+    linkerArguments = []
+    useGccOverride = False
+    if strPlatform == 'Windows':
+        # Microsoft Visual C++ Compiler 9.0
+        compilerArguments += ['/O2', '/fp:precise', marchFlag]
+    elif strPlatform == 'Linux':
+        # assuming Linux and gcc
+        compilerArguments += ['-Ofast', marchFlag, mtuneFlag]
+        useGccOverride = True
+    elif strPlatform == 'Darwin':
+        # assuming Darwin
+        compilerArguments += ['-Ofast', marchFlag, mtuneFlag]
+    else:
+        WARNING("Your platform is currently not supported by %s: %s" % (
+            packageName, strPlatform))
+
+    # define default cython directives, these may get extended along the script
+    cythonDirectives = {'language_level': '3str'}
+    defineMacros = []
+    CMD_COVERAGE = '--enable-cython-tracing'
+    if CMD_COVERAGE in sys.argv:
+        sys.argv.remove(CMD_COVERAGE)
+        cythonDirectives['linetrace'] = True
+        cythonDirectives['binding'] = True
+        defineMacros += [('CYTHON_TRACE_NOGIL', '1'),
+                         ('CYTHON_TRACE', '1')]
+        print("Enabling cython line tracing allowing code coverage analysis")
+
+    print("Building %s v%s for %s." % (
+        packageName,
+        packageVersion,
+        strPlatform)
+    )
+
+    # check if all requirements are met prior to actually calling setup()
+    setupRequires = []
+    installRequires = []
+    checkRequirement(setupRequires, 'setuptools', 'setuptools>=18.0')
+    checkRequirement(setupRequires, 'Cython', 'cython>=0.29')
+    checkRequirement(setupRequires, 'numpy', 'numpy>=1.7')
+    checkRequirement(installRequires, 'six', 'six')
+
+    print("Requirements for setup: %s" % (setupRequires))
+    print("Requirements for install: %s" % (installRequires))
+
+    # everything's set. Fire in the hole.
+    setup(
+        name=packageName,
+        version=packageVersion,
+        description='Efficient layout mask handling in Python',
+        long_description=pypiDescription,
+        long_description_content_type='text/markdown',
+        author='Christoph Wagner, EMS group TU Ilmenau',
+        author_email='christoph.wagner@tu-ilmenau.de',
+        url='https://ems-tu-ilmenau.github.io/maskarray/',
+        license='Apache Software License',
+        classifiers=[
+            'Development Status :: 1 - Production/Stable',
+            'Framework :: IPython',
+            'Framework :: Jupyter',
+            'Intended Audience :: Science/Research',
+            'Intended Audience :: Manufacturing',
+            'License :: OSI Approved :: Apache Software License',
+            'Natural Language :: English',
+            'Operating System :: Microsoft :: Windows',
+            'Operating System :: POSIX :: Linux',
+            'Operating System :: MacOS :: MacOS X',
+            'Programming Language :: Python',
+            'Programming Language :: Python :: 2',
+            'Programming Language :: Python :: 2.7',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.4',
+            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
+            'Programming Language :: Python :: Implementation :: CPython',
+            'Topic :: Scientific/Engineering',
+            'Topic :: Software Development :: Electronic Design Automation ' +
+            '(EDA)',
+            'Topic :: Scientific/Engineering :: Interface Engine/Protocol ' +
+            'Translator'
+        ],
+        keywords=('efficient storage redundancy optimization layout data ' +
+                  'mask eda asic chip design'),
+        setup_requires=setupRequires,
+        install_requires=installRequires,
+        packages=[
+            packageName
+        ],
+        cmdclass={'build_doc': doc_opts()},
+        command_options={
+            'build_doc': {
+                'project': ('setup.py', packageName),
+                'version': ('setup.py', packageVersion),
+                'release': ('setup.py', packageVersion),
+                'copyright': ('setup.py', '2019, ' + packageName)
+            }},
+        ext_modules=lazyCythonize(extensions)
+    )

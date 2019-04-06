@@ -1,0 +1,10 @@
+include README.md
+include LICENSE
+include makefile
+include .version
+recursive-include . *.py
+recursive-include maskarray *.pyx
+recursive-include maskarray *.pxd
+recursive-include maskarray *.h
+recursive-exclude maskarray *.c
+recursive-include doc *

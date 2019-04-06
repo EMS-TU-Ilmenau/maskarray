@@ -1,0 +1,60 @@
+Metadata-Version: 1.1
+Name: maskarray
+Version: 0.1
+Summary: Efficient layout mask handling in Python
+Home-page: https://ems-tu-ilmenau.github.io/maskarray/
+Author: Christoph Wagner, EMS group TU Ilmenau
+Author-email: christoph.wagner@tu-ilmenau.de
+License: Apache Software License
+Description: # maskarray
+
+        ## Description
+        The python module `maskarray` enables the efficient representation of
+        binary (on-off) process masks, as found in many EDA fields, specifically
+        designed with automization of ASIC layout mask data in mind.
+
+        ### Languages
+        - Python
+        - Cython
+
+        ### Dependencies
+        - Python >= 2.7 or >=3.4
+        - Numpy >= 1.7
+        - Cython >= 0.29
+        - setuptools >= 18.0
+
+        ### Authors
+        - Christoph Wagner - Technische Universität Ilmenau,
+        					 Institute for Information Technology, EMS Group
+
+        ### Contact
+        - christoph.wagner@tu-ilmenau.de
+        - https://www.tu-ilmenau.de/it-ems/
+
+        Please check out out github repository at http://github.com/EMS-TU-Ilmenau/maskarray for further information
+
+Keywords: efficient storage redundancy optimization layout data mask eda asic chip design
+Platform: UNKNOWN
+Classifier: Development Status :: 1 - Production/Stable
+Classifier: Framework :: IPython
+Classifier: Framework :: Jupyter
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Manufacturing
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Natural Language :: English
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.4
+Classifier: Programming Language :: Python :: 3.5
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Software Development :: Electronic Design Automation (EDA)
+Classifier: Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator
