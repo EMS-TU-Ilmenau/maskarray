@@ -1,6 +1,8 @@
 # python stuff
 *.pyc
 *.pyo
+.eggs
+*.egg-info
 
 # prevent built pdfs to be automatically included to commits every time
 doc/*.pdf
@@ -49,3 +51,8 @@ setup.files
 
 # kate swap
 *.kate-swp
+
+# data directory
+data/*.npy
+data/*.npz
+data/*.png

@@ -41,6 +41,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'sphinx.ext.autosummary',
+    'sphinxcontrib.tikz',
     'numpydoc'
     ]
 
@@ -122,6 +123,10 @@ htmlhelp_basename = 'maskarraydoc'
 
 
 # -- Options for Texinfo output -------------------------------------------
+
+# -- Options for sphinxcontrib.tikz ---------------------------------------
+tikz_transparent = True
+tikz_tikzlibraries = ''
 
 # Grouping the document tree into Texinfo files. List of tuples
 # (source start file, target name, title, author,
