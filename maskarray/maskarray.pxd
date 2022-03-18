@@ -19,6 +19,16 @@ import cython
 import numpy as np
 cimport numpy as np
 
-cdef class maskarray:
+from .rle cimport *
 
-    pass
+cdef class substitution_encoder(object):
+    cdef readonly np.uint8_t page
+    cdef readonly np.ndarray symbols
+    cpdef np.ndarray encode(self, np.ndarray)
+
+
+cdef class maskarray(object):
+    cdef readonly list page_encoder
+    cdef readonly np.ndarray data
+    cdef readonly np.ndarray rows
+    cpdef void add_layer(self, np.ndarray)

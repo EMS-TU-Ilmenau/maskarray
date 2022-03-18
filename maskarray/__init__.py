@@ -30,7 +30,8 @@ representation.
 """
 
 # import fundamental types and classes first, also behavioural flags
-from .maskarray import maskarray
+from .maskarray import *
+from .rle import *
 
 # define package version (gets overwritten by setup script)
 from .version import __version__
